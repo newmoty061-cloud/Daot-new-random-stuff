@@ -22,32 +22,17 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Gradle 8.10.2
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: '8.10.2'
 
-      - name: Locate and build project
-        shell: bash
+      - name: Check project files
         run: |
-          BUILD_FILE=$(find . \
-            -type f \
-            \( -name build.gradle -o -name build.gradle.kts \) \
-            -not -path '*/.gradle/*' \
-            -not -path '*/build/*' \
-            | head -n 1)
+          pwd
+          ls -la
+          find . -maxdepth 4 -type f \( -name build.gradle -o -name build.gradle.kts \)
 
-          if [ -z "$BUILD_FILE" ]; then
-            echo "ERROR: No Gradle build file found."
-            echo "Repository contents:"
-            find . -maxdepth 4 -type f | head -n 100
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$BUILD_FILE")
-          echo "Found project at: $PROJECT_DIR"
-          cd "$PROJECT_DIR"
-          gradle build
+      - name: Build Fabric mod
+        run: gradle build
 
       - name: Upload mod JAR
         if: success()
