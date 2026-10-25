@@ -1,33 +1,59 @@
-name: build
+
+name: Build DAOT Limbs
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout source code
+        uses: actions/checkout@v5
 
-      - name: Set up JDK 17
+      - name: Set up Java 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin' # You can change this if you use a different JDK provider
-          java-version: '17'    # Adjust if your Minecraft mod requires Java 21
+          distribution: temurin
+          java-version: '21'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: '8.10.2'
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Locate and build project
+        shell: bash
+        run: |
+          BUILD_FILE=$(find . \
+            -type f \
+            \( -name build.gradle -o -name build.gradle.kts \) \
+            -not -path '*/.gradle/*' \
+            -not -path '*/build/*' \
+            | head -n 1)
 
-      - name: Upload Build Artifacts
+          if [ -z "$BUILD_FILE" ]; then
+            echo "ERROR: No Gradle build file found."
+            echo "Repository contents:"
+            find . -maxdepth 4 -type f | head -n 100
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$BUILD_FILE")
+          echo "Found project at: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+          gradle build
+
+      - name: Upload mod JAR
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: mod-artifacts
-          path: build/libs/
+          name: daot-limbs-jar
+          path: '**/build/libs/*.jar'
+          if-no-files-found: error
+          retention-days: 14
